@@ -1,0 +1,126 @@
+---
+title: "Assignment 10"
+author: "Mirza Rehan"
+date: "2023-12-04"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(Sleuth3)
+library(TSA)
+library(orcutt)
+```
+
+5.
+```{r}
+head(ex1518)
+plot(Cases~Year, ex1518,type='b')
+```
+After looking at the plot between the number of cases per year against the year we can clearly see that it is not a linear relationship. So we need a log transformation.
+
+```{r}
+logCases <- log(ex1518$Cases,10)
+plot(logCases~Year,ex1518,type="b")
+```
+The plot looks much better after applying the log transformation.
+
+
+(a)Fit a vaccine-year interaction model, ignoring correlation
+
+```{r}
+m5_log <- lm(logCases~Year*Vaccine,ex1518)
+summary(m5_log)
+```
+As per the question, we fit a model with an interaction of year and vaccine. From this model, we can see that only in year when the vaccine was released there was a significant difference in the cases of measles (p-value being less than 0.05). 
+
+
+(b)
+```{r}
+m5_int <- lm(logCases~Year*Vaccine,ex1518)
+summary(m5_int)
+m5_noint <- lm(logCases~Year+Vaccine,ex1518)
+summary(m5_noint)
+```
+The interaction model is the same as the model from question a, but with the model that controls for vaccine. It is quite strange that we get no significance in the measles cases after the vaccine was released. Which is definitely wrong considering the plot between year and vaccine. We should consider correlation.
+
+```{r}
+pacf(resid(m5_int))
+pacf(resid(m5_noint))
+t1 <- cochrane.orcutt(m5_int)
+t2 <- cochrane.orcutt(m5_noint)
+```
+We can see from the PartialACF and Lag plots of Interaction mode and non interaction model. Both of them show clear evidence of correlation. I have ran cochrane orcutt function on both models
+
+```{r}
+summary(t1)
+summary(t2)
+```
+Even after accounting for correlation we get very similar results in the summary, Interaction model shows no significant variable and Non interaction model says that having a vaccine shows no significant increase or decrease in the model. Lets take a look at the plot again,
+
+```{r}
+plot(Cases~Year,ex1518, type="b")
+```
+The vaccine was released in the year 1963, Look at the plot before and after. Before the release of the vaccine, we can see that the plot is static. After the release of the vaccine, It looks like a linear relationship.
+
+
+(c)Do two different analysis. One on data before the vaccine was available and another on data after the vaccine was available. Correct for correlation if necessary
+
+
+```{r}
+BeforeVaccine <- ex1518[ex1518$Year < 1963, ]
+plot(Cases~Year,BeforeVaccine, type="b")
+m_prevaccine <- lm(Cases~Year,BeforeVaccine)
+summary(m_prevaccine)
+```
+After looking at the data before the vaccine was released, we can see that it does not need a transformation. We then fit a model between Cases and Year on the pre vaccine dataset. The conclusions we can make are that the increase or decrease in the number of measles cases was not significant to each other on a yearly basis. But we still look for correlation.
+
+```{r}
+pacf(resid(m_prevaccine))
+```
+The plot shows no correlation, we stick to our conclusions.
+
+```{r}
+AfterVaccine <- ex1518[ex1518$Year>1962, ]
+plot(Cases~Year,AfterVaccine,type="b")
+```
+AFter looking at the relationship between cases and years, post the release of the vaccine. We can clearly say it needs a transformation.
+
+```{r}
+logcases_post <- log(AfterVaccine$Cases,10)
+plot(logcases_post~Year,AfterVaccine)
+```
+The plot looks much better now, we can see it has potential for a linear relationship.
+
+
+```{r}
+m_postvaccine <- lm(logcases_post~Year,AfterVaccine)
+summary(m_postvaccine)
+```
+After fitting the model using the log variable we can say, that every year after the release of the vaccine there was a decrease in 0.08 units in cases. We still have to look for correlation
+
+```{r}
+pacf(resid(m_postvaccine))
+```
+
+After looking for correlation, it seems that there is correlation in the model.
+
+```{r}
+t3 <- cochrane.orcutt(m_postvaccine)
+summary(t3)
+```
+We can see that the model is very similar, and the number of measles cases per year is reducing 0.08 units. 
+
+(d) In time series models, such as the AR(1) error model, the correlation structure is assumed to be the same over time. If that assumption is violated it can result in incorrect standard errors.Discuss if you think this is relevant to this example.
+
+A. In this example the correlation structure was not the same over time. Before the vaccine was released there was no correlation in the yearly number of cases. This could be because measles was so widespread an year's time is really long and would result in a huge change of number of cases per year. After the vaccine is released there is a steady yearly decline in the number of measles. So there is a correlation in the yearly data.
+
+
+
+
+
+
+
